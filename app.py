@@ -18,7 +18,6 @@ TOKEN_URL = 'https://api.fitbit.com/oauth2/token'
 SCOPE = 'heartrate'
 
 def generate_code_verifier():
-    #length = random.randint(44, 129)
     length = 64
     code_verifier = secrets.token_urlsafe(length)
     return code_verifier
@@ -57,8 +56,6 @@ def callback():
     code = request.args.get("code")
     if not code:
         return "Authorization failed: Missing code", 400
-
-    print(f"Received authorization code: {code}")  # Debugging
 
     token_url = "https://api.fitbit.com/oauth2/token"
 
