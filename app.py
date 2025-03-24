@@ -169,6 +169,40 @@ def getSteps(date, period):
     
     return parsed_steps
 
+def getBreathingRate(date):
+    access_token = session.get("access_token")
+
+
+    if not access_token:
+        return "User is not authenticated", 400
+   
+    api_url = "https://api.fitbit.com//1/user/-/br/date/{date}.json"
+   
+    url = api_url.format(date=date)
+
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+       
+    if response.status_code != 200:
+        print(f"Failed to get breathing rate data: {response.status_code}, {response.text}")
+        return [] #Returns an empty list if the request fails
+   
+    #Parse response
+    breathing_rate_data = response.json().get("br", [])
+    if len(breathing_rate_data) > 0:
+        entry = breathing_rate_data[0]  # Get the first (and only) entry
+        dateTime = entry.get("dateTime")
+        breathingRate = entry.get("value", {}).get("breathingRate")
+        return {"dateTime": dateTime, "breathingRate": breathingRate}
+   
+    # Return default response if no data is available
+    return {"dateTime": None, "breathingRate": "No data available"}
+
+
 @app.route("/dashboard")
 def dashboard():
     heart_data = getHeartData("2025-03-18","1d")
@@ -179,8 +213,10 @@ def dashboard():
 
     steps_data = getSteps("2025-03-23","7d")
 
+    brData = getBreathingRate("2025-03-22")
+
     return render_template("dashboard.html",resting_heart_rate=restingHR,
-                           heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data,
+                           heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data, brData = brData
                            )
 
 @app.route("/")
