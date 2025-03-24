@@ -15,7 +15,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 REDIRECT_URI = 'http://127.0.0.1:5000/callback'
 TOKEN_URL = 'https://api.fitbit.com/oauth2/token'
-SCOPE = 'heartrate'
+SCOPE = 'heartrate activity respiratory_rate'
 
 def generate_code_verifier():
     length = 64
@@ -108,17 +108,17 @@ def refresh_token():
 
     return "Token refreshed!"
 
-FITBIT_API_URL = "https://api.fitbit.com/1/user/-/activities/heart/date/{date}/{period}.json"
-
-def get_heart_rate_data(user_id,date,period):
+def getHeartData(date, period):
     access_token = session.get("access_token")
     
     if not access_token:
         return "User is not authenticated", 400
-
-    url = FITBIT_API_URL.format(user_id=user_id,date=date,period=period)
     
-    #Authorization header
+    api_url = "https://api.fitbit.com/1/user/-/activities/heart/date/{date}/{period}.json"
+
+    url = api_url.format(date=date, period=period)
+    
+    # Authorization header
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json"
@@ -132,16 +132,56 @@ def get_heart_rate_data(user_id,date,period):
 
     # Parse the response data
     heart_data = response.json()["activities-heart"][0]
+    dateTime = heart_data.get("dateTime")
+    restingHR = heart_data.get("value", {}).get("restingHeartRate")
+    hrZones = heart_data.get("value", {}).get("heartRateZones", [])
 
-    heart_rate_zones = heart_data["value"]["heartRateZones"]
+    return {
+        "dateTime": dateTime,
+        "restingHR":restingHR,
+        "hrZones":hrZones
+    }
 
-    return heart_rate_zones
+def getSteps(date, period):
+    access_token = session.get("access_token")
+    
+    if not access_token:
+        return "User is not authenticated", 400
+    
+    api_url = "https://api.fitbit.com/1/user/-/activities/steps/date/{date}/{period}.json"
+
+    url = api_url.format(date=date, period=period)
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        print(f"Failed to get steps data: {response.status_code}, {response.text}")
+        return []  # Return an empty list if the request fails
+    
+    # Parse response
+    steps_data = response.json().get("activities-steps", [])
+    parsed_steps = [{"dateTime": entry.get("dateTime"), "value": entry.get("value")} for entry in steps_data]
+    
+    return parsed_steps
 
 @app.route("/dashboard")
 def dashboard():
-    heart_rate_zones = get_heart_rate_data("-","2025-02-20","1d")
+    heart_data = getHeartData("2025-03-18","1d")
 
-    return render_template("dashboard.html",heart_rate_zones = heart_rate_zones)
+    dateTime = heart_data.get("dateTime")
+    restingHR = heart_data.get("restingHR")
+    hrZones = heart_data.get("hrZones")
+
+    steps_data = getSteps("2025-03-23","7d")
+
+    return render_template("dashboard.html",resting_heart_rate=restingHR,
+                           heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data,
+                           )
 
 @app.route("/")
 def home():

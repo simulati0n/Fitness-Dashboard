@@ -9,6 +9,9 @@
 <body>
     <h1>Fitbit Dashboard</h1>
 
+    <p><strong>Date Time:</strong> {{dateTime}}</p>
+    <p><strong>Resting Heart Rate:</strong> {{resting_heart_rate}}</p>
+    <h3>Heart Rate Zones:</h3>
     <ul>
         {% for zone in heart_rate_zones %}
             <li>
@@ -18,7 +21,20 @@
             </li>
         {% endfor %}
     </ul>
-    
+
+    <h1>Steps Data</h1>
+    <table border="1">
+        <tr>
+            <th>Date</th>
+            <th>Steps</th>
+        </tr>
+        {% for step in steps_data %}
+        <tr>
+            <td>{{ step.dateTime }}</td>
+            <td>{{ step.value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
     
 
 
