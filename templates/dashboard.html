@@ -4,45 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fitbit Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ url_for('static',filename = 'style.css') }}">
 </head>
 <body>
-    <h1>Fitbit Dashboard</h1>
+    <div class = "header">
+        <h1>Fitness Dashboard</h1>
+    </div>
 
-    <p><strong>Date Time:</strong> {{dateTime}}</p>
-    <p><strong>Resting Heart Rate:</strong> {{resting_heart_rate}}</p>
-    <h3>Heart Rate Zones:</h3>
-    <ul>
-        {% for zone in heart_rate_zones %}
-            <li>
-                {{ zone["name"] }}<br>
-                Min: {{ zone["min"] }}<br>
-                Max: {{ zone["max"] }}
-            </li>
-        {% endfor %}
-    </ul>
+    <div class = box1> <!-- health metrics-->
+        <div class ="heart-box">
+            <h1>Heart Data</h1>
+            <p><strong>Date Time:</strong> {{dateTime}}</p>
+            <p><strong>Resting Heart Rate:</strong> {{resting_heart_rate}}</p>
+            <h3>Heart Rate Zones:</h3>
+            <table border="1">
+                <tr>
+                    <th>Zone</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                </tr>
+                {% for zone in heart_rate_zones %}
+                <tr>
+                    <td>{{ zone["name"] }}</td>
+                    <td>{{ zone["min"] }}</td>
+                    <td>{{ zone["max"] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
-    <h1>Steps Data</h1>
-    <table border="1">
-        <tr>
-            <th>Date</th>
-            <th>Steps</th>
-        </tr>
-        {% for step in steps_data %}
-        <tr>
-            <td>{{ step.dateTime }}</td>
-            <td>{{ step.value }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+        <div class = "breath-box">
+            <h1>Respiratory Data</h1>
+            <h3>Breathing Rate:</h3>
+            <p><strong>Date:</strong> {{ brData.dateTime }}</p>
+            <p><strong>Breathing Rate:</strong> {{ brData.breathingRate }} breaths per minute</p>
+            
+            <h3>SP02 Reading:</h3>
+            <p><strong>Date: </strong> {{sp02Data.dateTime}} </p>
+            <p><strong>Avg:</strong> {{sp02Data.avg}} </p>
+            <p><strong>Min:</strong> {{sp02Data.min_val}} </p>
+            <p><strong>Max:</strong> {{sp02Data.max_val}} </p>
+        </div>
+    </div>
+    <div class ="box2" > <!--activity metrics-->
 
-    <h3>Breathing Rate:</h3>
-    <p><strong>Date:</strong> {{ brData.dateTime }}</p>
-    <p><strong>Breathing Rate:</strong> {{ brData.breathingRate }} breaths per minute</p>
-    
+        <div class = "cals-box">
+            <h1>Calories Burned</h1>
+            <table border="1">
+                <tr>
+                    <th>Date</th>
+                    <th>Cals</th>
+                </tr>
+                {% for cals in calsData %}
+                <tr>
+                    <td>{{ cals.dateTime }}</td>
+                    <td>{{ cals.value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
-    
+        <div class = "steps-box">
+            <h1>Steps Data</h1>
+            <table border="1">
+                <tr>
+                    <th>Date</th>
+                    <th>Steps</th>
+                </tr>
+                {% for step in steps_data %}
+                <tr>
+                    <td>{{ step.dateTime }}</td>
+                    <td>{{ step.value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
+        <div class = "dist-box">
+            <h1>Distance</h1>
+            <table border="1">
+                <tr>
+                    <th>Date</th>
+                    <th>Distance (miles)</th>
+                </tr>
+                {% for dist in dist_data %}
+                <tr>
+                    <td>{{dist.dateTime}}</td>
+                    <td>{{dist.value}}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+
+    </div>
 
 </body>    
 
