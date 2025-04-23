@@ -15,7 +15,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 REDIRECT_URI = 'http://127.0.0.1:5000/callback'
 TOKEN_URL = 'https://api.fitbit.com/oauth2/token'
-SCOPE = 'heartrate activity respiratory_rate'
+SCOPE = 'heartrate activity respiratory_rate oxygen_saturation'
 
 def generate_code_verifier():
     length = 64
@@ -169,6 +169,69 @@ def getSteps(date, period):
     
     return parsed_steps
 
+def getCalories(date, period):
+    access_token = session.get("access_token")
+    
+    if not access_token:
+        return "User is not authenticated", 400
+    
+    api_url = "https://api.fitbit.com/1/user/-/activities/activityCalories/date/{date}/{period}.json"
+
+    url = api_url.format(date=date, period=period)
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        print(f"Failed to get calories data: {response.status_code}, {response.text}")
+        return []  # Return an empty list if the request fails
+    
+    
+    # Parse response
+    calories_data = response.json().get("activities-activityCalories", [])
+    parsed_cals = [{"dateTime": entry.get("dateTime"), "value": entry.get("value")} for entry in calories_data]
+    
+    return parsed_cals
+
+def getDistance(date, period):
+    access_token = session.get("access_token")
+    
+    if not access_token:
+        return "User is not authenticated", 400
+    
+    api_url = "https://api.fitbit.com/1/user/-/activities/distance/date/{date}/{period}.json"
+
+    url = api_url.format(date=date, period=period)
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        print(f"Failed to get steps data: {response.status_code}, {response.text}")
+        return "failed"
+    
+    # Parse response
+    """
+    {'activities-distance': [{'dateTime': '2025-03-16', 'value': '0'}, 
+    {'dateTime': '2025-03-17', 'value': '0.038468'}, {'dateTime': '2025-03-18', 'value': '0.298242'}, 
+    {'dateTime': '2025-03-19', 'value': '0'}, {'dateTime': '2025-03-20', 'value': '0.460234'}, 
+    {'dateTime': '2025-03-21', 'value': '0.768835'}, {'dateTime': '2025-03-22', 'value': '3.983843'}]}
+    """
+
+    dist_data = response.json().get("activities-distance", [])
+    parsed_data = [{"dateTime": entry.get("dateTime"), "value": entry.get("value")} for entry in dist_data]
+
+    return parsed_data
+
+
 def getBreathingRate(date):
     access_token = session.get("access_token")
 
@@ -202,9 +265,46 @@ def getBreathingRate(date):
     # Return default response if no data is available
     return {"dateTime": None, "breathingRate": "No data available"}
 
+def getSP02(date):
+    access_token = session.get("access_token")
+
+
+    if not access_token:
+        return "User is not authenticated", 400
+
+    api_url = "https://api.fitbit.com/1/user/-/spo2/date/{date}.json"
+    url = api_url.format(date=date)
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+       
+    if response.status_code != 200:
+        print(f"Failed to get SP02 data: {response.status_code}, {response.text}")
+        return [] #Returns an empty list if the request fails
+    
+    #Parse response
+    spo2_data = response.json()
+    dateTime = spo2_data.get("dateTime")
+    value = spo2_data.get("value", {})
+    avg = value.get("avg")
+    min_val = value.get("min")
+    max_val = value.get("max")
+
+
+    return {
+        "dateTime": dateTime,
+        "avg": avg,
+        "min_val": min_val,
+        "max_val": max_val
+    }
+
 
 @app.route("/dashboard")
-def dashboard():
+def dashboard(): 
+    # *** Measurement units are in US units.
     heart_data = getHeartData("2025-03-18","1d")
 
     dateTime = heart_data.get("dateTime")
@@ -215,9 +315,16 @@ def dashboard():
 
     brData = getBreathingRate("2025-03-22")
 
+    sp02Data = getSP02("2025-03-22")
+
+    calsData = getCalories("2025-03-23","7d")
+
+    dist_data = getDistance("2025-03-18","7d")
+
     return render_template("dashboard.html",resting_heart_rate=restingHR,
-                           heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data, brData = brData
-                           )
+                           heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data, 
+                           brData = brData, sp02Data = sp02Data, calsData=calsData, dist_data=dist_data
+    )
 
 @app.route("/")
 def home():
@@ -227,3 +334,4 @@ def home():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
