@@ -16,6 +16,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = 'http://127.0.0.1:5000/callback'
 TOKEN_URL = 'https://api.fitbit.com/oauth2/token'
 SCOPE = 'heartrate activity respiratory_rate oxygen_saturation'
+DATE = 'today'
 
 def generate_code_verifier():
     length = 64
@@ -219,15 +220,8 @@ def getDistance(date, period):
         return "failed"
     
     # Parse response
-    """
-    {'activities-distance': [{'dateTime': '2025-03-16', 'value': '0'}, 
-    {'dateTime': '2025-03-17', 'value': '0.038468'}, {'dateTime': '2025-03-18', 'value': '0.298242'}, 
-    {'dateTime': '2025-03-19', 'value': '0'}, {'dateTime': '2025-03-20', 'value': '0.460234'}, 
-    {'dateTime': '2025-03-21', 'value': '0.768835'}, {'dateTime': '2025-03-22', 'value': '3.983843'}]}
-    """
-
     dist_data = response.json().get("activities-distance", [])
-    parsed_data = [{"dateTime": entry.get("dateTime"), "value": entry.get("value")} for entry in dist_data]
+    parsed_data = [{"dateTime": entry.get("dateTime"), "value": float(entry.get("value",0))} for entry in dist_data]
 
     return parsed_data
 
@@ -305,21 +299,21 @@ def getSP02(date):
 @app.route("/dashboard")
 def dashboard(): 
     # *** Measurement units are in US units.
-    heart_data = getHeartData("2025-03-18","1d")
+    heart_data = getHeartData(DATE,"1d")
 
     dateTime = heart_data.get("dateTime")
     restingHR = heart_data.get("restingHR")
     hrZones = heart_data.get("hrZones")
 
-    steps_data = getSteps("2025-03-23","7d")
+    steps_data = getSteps(DATE,"7d")
 
-    brData = getBreathingRate("2025-03-22")
+    brData = getBreathingRate(DATE)
 
-    sp02Data = getSP02("2025-03-22")
+    sp02Data = getSP02(DATE)
 
-    calsData = getCalories("2025-03-23","7d")
+    calsData = getCalories(DATE,"7d")
 
-    dist_data = getDistance("2025-03-18","7d")
+    dist_data = getDistance(DATE,"7d")
 
     return render_template("dashboard.html",resting_heart_rate=restingHR,
                            heart_rate_zones = hrZones,dateTime = dateTime, steps_data=steps_data, 

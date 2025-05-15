@@ -3,104 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fitbit Dashboard</title>
+    <title>Fitness Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static',filename = 'style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class = "header">
+    <header class="header">
         <h1>Fitness Dashboard</h1>
-    </div>
-
-    <div class = box1> <!-- health metrics-->
+    </header>
+    
+    <div class = content-cont>
         <div class ="heart-box">
             <h1>Heart Data</h1>
             <p><strong>Date Time:</strong> {{dateTime}}</p>
             <p><strong>Resting Heart Rate:</strong> {{resting_heart_rate}}</p>
-            <h3>Heart Rate Zones:</h3>
-            <table border="1">
-                <tr>
-                    <th>Zone</th>
-                    <th>Min</th>
-                    <th>Max</th>
-                </tr>
-                {% for zone in heart_rate_zones %}
-                <tr>
-                    <td>{{ zone["name"] }}</td>
-                    <td>{{ zone["min"] }}</td>
-                    <td>{{ zone["max"] }}</td>
-                </tr>
-                {% endfor %}
-            </table>
+            <canvas id="hrZonesChart" width="100" height="300"></canvas>
+            
+            <script>
+                const hrChart = document.getElementById('hrZonesChart').getContext('2d');
+
+                const hrZones = JSON.parse('{{ heart_rate_zones | tojson | safe }}');
+                
+                const labels = hrZones.map(zone => zone.name);
+                const data = hrZones.map(zone => zone.minutes);
+
+                new Chart(hrChart, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Minutes in Zone',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.6)',    // Fat Burn
+                                'rgba(54, 162, 235, 0.6)',    // Cardio
+                                'rgba(255, 206, 86, 0.6)',    // Peak
+                                'rgba(75, 192, 192, 0.6)'     // Out of Range
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { 
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14 
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Heart Rate Zones (Minutes)',
+                                font: {
+                                    size: 18 
+                                }
+                            },
+                            tooltip: {
+                                bodyFont: {
+                                    size: 14 
+                                }
+                            }
+                        },
+                    
+                    }
+                });
+            </script>
         </div>
 
         <div class = "breath-box">
             <h1>Respiratory Data</h1>
-            <h3>Breathing Rate:</h3>
             <p><strong>Date:</strong> {{ brData.dateTime }}</p>
             <p><strong>Breathing Rate:</strong> {{ brData.breathingRate }} breaths per minute</p>
             
-            <h3>SP02 Reading:</h3>
-            <p><strong>Date: </strong> {{sp02Data.dateTime}} </p>
-            <p><strong>Avg:</strong> {{sp02Data.avg}} </p>
-            <p><strong>Min:</strong> {{sp02Data.min_val}} </p>
-            <p><strong>Max:</strong> {{sp02Data.max_val}} </p>
+            <canvas id="breathCTX" width="400" height="600"></canvas>
+
+            <script>
+                const breathCTX = document.getElementById('breathCTX').getContext('2d');
+                const sp02Data = JSON.parse('{{ sp02Data | tojson | safe }}');
+                const sp02Labels = ['Average', 'Minimum', 'Maximum']; 
+                const sp02Values = [sp02Data.avg, sp02Data.min_val, sp02Data.max_val];
+
+                new Chart(breathCTX, {
+                    type: 'bar',
+                    data: {
+                        labels: sp02Labels, 
+                        datasets: [{
+                            label: 'SpO2 Levels (%)',
+                            data: sp02Values,
+                            backgroundColor: [
+                                'rgba(75, 192, 192, 0.6)', // Average
+                                'rgba(255, 99, 132, 0.6)', // Minimum
+                                'rgba(54, 162, 235, 0.6)'  // Maximum
+                            ],
+                            borderColor: [
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100, 
+                                title: {
+                                    display: true, 
+                                    text: 'Percentage of O2 in Blood', 
+                                    font: {
+                                        size: 14 
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false 
+                            },
+                            title: {
+                                display: true,
+                                text: 'SpO2 Levels for {{ sp02Data.dateTime }}'
+                            }
+                        }
+                    }
+                });
+            </script>
         </div>
-    </div>
-    <div class ="box2" > <!--activity metrics-->
 
         <div class = "cals-box">
-            <h1>Calories Burned</h1>
-            <table border="1">
-                <tr>
-                    <th>Date</th>
-                    <th>Cals</th>
-                </tr>
-                {% for cals in calsData %}
-                <tr>
-                    <td>{{ cals.dateTime }}</td>
-                    <td>{{ cals.value }}</td>
-                </tr>
-                {% endfor %}
-            </table>
+            <canvas id="calsCTX" width="400" height="400"></canvas>
+            <script>
+                const calsCTX = document.getElementById('calsCTX').getContext('2d');
+                const calsLabels = JSON.parse('{{ calsData | map(attribute="dateTime") | list | tojson | safe }}');
+                const calsValues = JSON.parse('{{ calsData | map(attribute="value") | list | tojson | safe }}');
+                new Chart(calsCTX, {
+                    type: 'line',
+                    data: {
+                        labels: calsLabels,
+                        datasets: [{
+                            label: 'Calories Burned Over Time (in kcal)',
+                            data: calsValues,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, 
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            
+            </script>
         </div>
+            
 
-        <div class = "steps-box">
-            <h1>Steps Data</h1>
-            <table border="1">
-                <tr>
-                    <th>Date</th>
-                    <th>Steps</th>
-                </tr>
-                {% for step in steps_data %}
-                <tr>
-                    <td>{{ step.dateTime }}</td>
-                    <td>{{ step.value }}</td>
-                </tr>
-                {% endfor %}
-            </table>
+        <div class="steps-box">
+            <canvas id="stepsChart" width="400" height="400"></canvas>
+            <script>
+                const stepsCTX = document.getElementById('stepsChart').getContext('2d');
+                const stepLabels = JSON.parse('{{ steps_data | map(attribute="dateTime") | list | tojson | safe }}');
+                const stepValues = JSON.parse('{{ steps_data | map(attribute="value") | list | tojson | safe }}');
+
+                new Chart(stepsCTX, {
+                    type: 'line',
+                    data: {
+                        labels: stepLabels,
+                        datasets: [{
+                            label: 'Steps Over Time',
+                            data: stepValues,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, 
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1000
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
         </div>
 
         <div class = "dist-box">
-            <h1>Distance</h1>
-            <table border="1">
-                <tr>
-                    <th>Date</th>
-                    <th>Distance (miles)</th>
-                </tr>
-                {% for dist in dist_data %}
-                <tr>
-                    <td>{{dist.dateTime}}</td>
-                    <td>{{dist.value}}</td>
-                </tr>
-                {% endfor %}
-            </table>
+            <canvas id="distCTX" width="400" height="400"></canvas>
+            <script>
+                const distCTX = document.getElementById('distCTX').getContext('2d');
+                const distLabels = JSON.parse('{{ dist_data | map(attribute="dateTime") | list | tojson | safe }}');
+                const distValues = JSON.parse('{{ dist_data | map(attribute="value") | list | tojson | safe }}');
+
+                new Chart(distCTX, {
+                    type: 'line',
+                    data: {
+                        labels: distLabels,
+                        datasets: [{
+                            label: 'Distance Over Time (in miles)',
+                            data: distValues,
+                            borderColor: 'rgba(128, 0, 128, 1)',
+                            backgroundColor: 'rgba(128, 0, 128, 0.2)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, 
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                        
+                            }
+                        }
+                    }
+                });
+            </script>
+
         </div>
-
-
     </div>
-
 </body>    
-
 </html>
-        
-        
+
